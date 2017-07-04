@@ -1,8 +1,9 @@
-import argparse
 import os
-import tempfile
+import time
 import tarfile
 import datadog
+import argparse
+import tempfile
 from zipfile import ZipFile
 
 
@@ -15,6 +16,7 @@ parser.add_argument("--app-key", help="datadog app key")
 parser.add_argument("--dry-run", help="only print metrics to stdout", action='store_true')
 
 args = parser.parse_args()
+print(args)
 
 metrics_prefix = "vstoian.test.1"
 metrics_host = "iMac"
@@ -28,7 +30,7 @@ product_name = ""
 product_version = ""
 product_size = os.path.getsize(args.file_path)
 
-product_modification_time = os.path.getmtime(args.file_path)
+metric_timestamp = int(time.time())
 
 product_releases = []
 
@@ -86,9 +88,14 @@ if args.dry_run:
     print("dog metric post --host {} --tags version:{} --type gauge {}.{}.size {}".format(metrics_host, product_version, metrics_prefix, product_name, product_size))
 
     for release in product_releases:
-        print("dog metric post --host {} --tags release:{},version:{} --type gauge {}.{}.releases {}".format(metrics_host, release['name'], release['version'], metrics_prefix, product_name, release['size']))
+        print("dog metric post --host {} --tags product:{},release:{},version:{} --type gauge {}.{}.releases {}".format(metrics_host, product_version, release['name'], release['version'], metrics_prefix, product_name, release['size']))
 else:
-    datadog.initialize(api_key=args.api_key, app_key=args.app_key, host_name=metrics_host)
+    options = {
+        'api_key': args.api_key,
+        'app_key': args.app_key,
+    }
+
+    datadog.initialize(**options)
 
     product_size_metric = "{}.{}.size".format(metrics_prefix, product_name)
     product_size_tags = [ "version:{}".format(product_version) ]
@@ -99,7 +106,7 @@ else:
     stats = datadog.ThreadStats()
     stats.start()
 
-    stats.gauge(product_size_metric, product_size, product_modification_time, product_size_tags)
+    stats.gauge(product_size_metric, product_size, timestamp=metric_timestamp, tags=product_size_tags, host=metrics_host)
     for release in product_releases:
         release_metric = "{}.{}.releases".format(metrics_prefix, product_name)
         release_tags = [ "release:{}".format(release['name']), "version:{}".format(release['version'])]
@@ -107,6 +114,8 @@ else:
         # print(release_metric)
         # print(release_tags)
 
-        stats.gauge(release_metric, release['size'], product_modification_time, release_tags)
+        stats.gauge(release_metric, release['size'], timestamp=metric_timestamp, tags=release_tags, host=metrics_host)
+
+    stats.flush()
 
 
