@@ -1,0 +1,45 @@
+groups: []
+resources:
+- name: github-code
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/vlad-stoian/weight-but-why.git
+- name: s3-file
+  type: s3
+  source:
+    bucket: cf-services-tempest-artefacts
+    regexp: rabbitmq-1.8/archive/p-rabbitmq-(.*).pivotal
+    endpoint: s3.amazonaws.com
+    region_name: us-east-1
+    access_key_id: {{aws_access_key_id}}
+    secret_access_key: {{aws_secret_access_key}}
+
+resource_types: []
+jobs:
+- name: weight
+  plan:
+  - get: github-code
+  - get: s3-file
+  - task: do-smth
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: python
+          tag: alpine
+      run:
+        path: /bin/sh
+        args:
+        - -c
+        - |
+          set -eux
+          pip install -r github-code/requirements.txt
+          python github-code/weight.py --file-path $(ls -d s3-file/* | head -1) --dry-run
+        dir: ""
+      inputs:
+      - name: github-code
+        path: ""
+      - name: s3-file
+        path: ""
