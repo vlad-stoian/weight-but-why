@@ -102,3 +102,6 @@ ENV/
 
 
 ci/private.yml
+include/
+bin/
+*.pivotal
