@@ -13,7 +13,7 @@ lpass \
   > "$REPO/ci/private.yml"
 
 fly \
-  -t zumba \
+  -t rabbit \
   set-pipeline \
     -p "$PIPELINE_NAME" \
     -c "$REPO/ci/pipeline.yml" \

@@ -21,6 +21,7 @@ jobs:
   plan:
   - get: github-code
   - get: s3-file
+    trigger: true
   - task: do-smth
     config:
       platform: linux
@@ -36,7 +37,7 @@ jobs:
         - |
           set -eux
           pip install -r github-code/requirements.txt
-          python github-code/weight.py --file-path $(ls -d s3-file/* | head -1) --dry-run
+          python github-code/weight.py --file-path $(ls -d s3-file/* | head -1) --api-key {{datadog-api-key}} --app-key {{datadog-app-key}}
         dir: ""
       inputs:
       - name: github-code
