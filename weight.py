@@ -1,9 +1,9 @@
 import argparse
 import os
 
-import yaml
+from beeprint import pp
 
-from pivotal_product import PivotalProduct
+import pivotal_product
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--file-path", help="path to your .pivotal file")
@@ -13,10 +13,6 @@ print(args)
 
 product_size = os.path.getsize(args.file_path)
 
-pp = PivotalProduct(args.file_path)
+product = pivotal_product.parse_product(args.file_path)
 
-print(pp.product_name)
-print(pp.product_version)
-
-for release in pp.releases:
-    print(yaml.dump(pp.get_release_manifest(release), default_flow_style=False))
+pp(product)
