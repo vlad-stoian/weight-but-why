@@ -5,7 +5,34 @@ from zipfile import ZipFile
 
 import yaml
 
-from pivotal_product import PivotalProduct
+from pivotal_product import PivotalProduct, BoshRelease
+
+
+class TestBoshRelease(unittest.TestCase):
+    def test_properties_empty_constructor(self):
+        br = BoshRelease()
+
+        self.assertEqual("no-name", br.name, "name doesn't match")
+        self.assertEqual("no-version", br.version, "version doesn't match")
+        self.assertIsNone(br.file_size, "file size is not None")
+        self.assertIsNone(br.compress_size, "compress size is not None")
+
+    def test_properties_given_properties_constructor(self):
+        br = BoshRelease("random-name", "random-version", 1234, 5678)
+
+        self.assertEqual("random-name", br.name, "name doesn't match")
+        self.assertEqual("random-version", br.version, "version doesn't match")
+        self.assertEqual(1234, br.file_size, "file_size doesn't match")
+        self.assertEqual(5678, br.compress_size, "compress_size doesn't match")
+
+    def test_from_manifest(self):
+        manifest = {"name": "name-from-manifest", "version": "version-from-manifest"}
+        br = BoshRelease.from_manifest(manifest)
+
+        self.assertEqual("name-from-manifest", br.name, "name doesn't match")
+        self.assertEqual("version-from-manifest", br.version, "version doesn't match")
+        self.assertIsNone(br.file_size, "file size is not None")
+        self.assertIsNone(br.compress_size, "compress size is not None")
 
 
 class TestPivotalProduct(unittest.TestCase):
@@ -74,7 +101,7 @@ class TestPivotalProduct(unittest.TestCase):
             "releases don't match",
         )
 
-    def test_get_release_manifest(self):
+    def test_get_first_release_manifest(self):
         release_manifest = self.pivotal_product.get_release_manifest(
             "releases/release-1.tgz"
         )
@@ -84,6 +111,20 @@ class TestPivotalProduct(unittest.TestCase):
         )
         self.assertEqual(
             "release-1-version",
+            release_manifest["version"],
+            "release version doesn't match",
+        )
+
+    def test_get_second_release_manifest(self):
+        release_manifest = self.pivotal_product.get_release_manifest(
+            "releases/release-2.tgz"
+        )
+
+        self.assertEqual(
+            "release-2-name", release_manifest["name"], "release name doesn't match"
+        )
+        self.assertEqual(
+            "release-2-version",
             release_manifest["version"],
             "release version doesn't match",
         )

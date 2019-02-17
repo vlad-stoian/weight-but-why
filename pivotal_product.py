@@ -5,8 +5,33 @@ import os.path
 
 
 class BoshRelease:
-    def __init__(self):
-        pass
+    @staticmethod
+    def from_manifest(manifest):
+        return BoshRelease(manifest["name"], manifest["version"])
+
+    def __init__(
+        self, name="no-name", version="no-version", file_size=None, compress_size=None
+    ):
+        self._name = name
+        self._version = version
+        self._file_size = file_size
+        self._compress_size = compress_size
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def file_size(self):
+        return self._file_size
+
+    @property
+    def compress_size(self):
+        return self._compress_size
 
 
 class PivotalProduct:
@@ -68,4 +93,4 @@ class PivotalProduct:
                 release_manifest_file = release_tar.extractfile(file_in_tar)
                 return yaml.load(release_manifest_file.read())
 
-        raise Exception("Jesus")
+        raise LookupError("couldn't find 'release.MF' file")
