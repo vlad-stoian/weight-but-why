@@ -105,3 +105,4 @@ ci/private.yml
 include/
 bin/
 *.pivotal
+.idea
