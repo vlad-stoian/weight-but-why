@@ -56,21 +56,21 @@ class TestPivotalProduct(unittest.TestCase):
     def test_get_product_version(self):
         self.assertEqual(
             "1.2.3.4.5",
-            self.pivotal_product.get_product_version(),
+            self.pivotal_product.product_version,
             "product version doesn't match",
         )
 
     def test_get_product_name(self):
         self.assertEqual(
             "the-product",
-            self.pivotal_product.get_product_name(),
+            self.pivotal_product.product_name,
             "product name doesn't match",
         )
 
     def test_get_releases(self):
         self.assertEqual(
             ["releases/release-1.tgz", "releases/release-2.tgz"],
-            self.pivotal_product.get_releases(),
+            self.pivotal_product.releases,
             "releases don't match",
         )
 

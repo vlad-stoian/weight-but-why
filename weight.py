@@ -15,8 +15,8 @@ product_size = os.path.getsize(args.file_path)
 
 pp = PivotalProduct(args.file_path)
 
-print(pp.get_product_name())
-print(pp.get_product_version())
+print(pp.product_name)
+print(pp.product_version)
 
-for release in pp.get_releases():
+for release in pp.releases:
     print(yaml.dump(pp.get_release_manifest(release), default_flow_style=False))
