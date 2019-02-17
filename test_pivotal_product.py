@@ -1,6 +1,7 @@
 import tarfile
 import tempfile
 import unittest
+import io
 from zipfile import ZipFile, ZIP_STORED
 
 import yaml
@@ -51,13 +52,21 @@ class TestPivotalProduct(unittest.TestCase):
                 yaml.dump(product_metadata, default_flow_style=False),
             )
 
-            with tarfile.open("release-1.tgz", "w:gz") as tar:
+            with tarfile.open(
+                fileobj=tempfile.NamedTemporaryFile(delete=False), mode="w:gz"
+            ) as tar:
                 with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
-                    fp.write(yaml.dump(release1_metadata, default_flow_style=False))
+                    fp.write()
                 tar.add(fp.name, arcname="release.MF")
+                release_manifest = io.StringIO(
+                    yaml.dump(release1_metadata, default_flow_style=False)
+                )
+                tar.addfile(tarfile.TarInfo())
             temp_zip.write(tar.name, arcname="releases/release-1.tgz")
 
-            with tarfile.open("release-2.tgz", "w:gz") as tar:
+            with tarfile.open(
+                fileobj=tempfile.NamedTemporaryFile(delete=False), mode="w:gz"
+            ) as tar:
                 with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
                     fp.write(yaml.dump(release2_metadata, default_flow_style=False))
                 tar.add(fp.name, arcname="./release.MF")
