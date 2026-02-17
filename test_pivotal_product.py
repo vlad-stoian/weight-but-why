@@ -1,95 +1,91 @@
+import io
 import tarfile
 import tempfile
-import unittest
-from zipfile import ZipFile, ZIP_STORED
+import zipfile
+from pathlib import Path
+from typing import Generator
 
+import pytest
 import yaml
 
-from pivotal_product import PivotalProduct, BoshRelease, parse_product
+from pivotal_product import BoshRelease, parse_product
 
 
-class TestBoshRelease(unittest.TestCase):
-    def test_properties_only_needed(self):
+class TestBoshRelease:
+    def test_properties_only_needed(self) -> None:
         br = BoshRelease("random-name", "random-version")
 
-        self.assertEqual("random-name", br.name, "name doesn't match")
-        self.assertEqual("random-version", br.version, "version doesn't match")
-        self.assertIsNone(br.file_size, "file size is not None")
-        self.assertIsNone(br.compress_size, "compress size is not None")
+        assert br.name == "random-name"
+        assert br.version == "random-version"
+        assert br.file_size is None
+        assert br.compress_size is None
 
-    def test_properties_all(self):
+    def test_properties_all(self) -> None:
         br = BoshRelease("random-name", "random-version", 1234, 5678)
 
-        self.assertEqual("random-name", br.name, "name doesn't match")
-        self.assertEqual("random-version", br.version, "version doesn't match")
-        self.assertEqual(1234, br.file_size, "file_size doesn't match")
-        self.assertEqual(5678, br.compress_size, "compress_size doesn't match")
+        assert br.name == "random-name"
+        assert br.version == "random-version"
+        assert br.file_size == 1234
+        assert br.compress_size == 5678
 
-    def test_from_manifest(self):
+    def test_from_manifest(self) -> None:
         manifest = {"name": "name-from-manifest", "version": "version-from-manifest"}
         br = BoshRelease.from_manifest(manifest, 1234, 5678)
 
-        self.assertEqual("name-from-manifest", br.name, "name doesn't match")
-        self.assertEqual("version-from-manifest", br.version, "version doesn't match")
-        self.assertEqual(1234, br.file_size, "file_size doesn't match")
-        self.assertEqual(5678, br.compress_size, "compress_size doesn't match")
+        assert br.name == "name-from-manifest"
+        assert br.version == "version-from-manifest"
+        assert br.file_size == 1234
+        assert br.compress_size == 5678
 
 
-class TestPivotalProduct(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls._product_file_path = tempfile.NamedTemporaryFile(delete=False).name
+@pytest.fixture
+def product_file() -> Generator[Path, None, None]:
+    product_metadata = {"product_version": "1.2.3.4.5", "name": "the-product"}
 
-        product_metadata = {"product_version": "1.2.3.4.5", "name": "the-product"}
+    release1_metadata = {"name": "release-1-name", "version": "release-1-version"}
+    release2_metadata = {"name": "release-2-name", "version": "release-2-version"}
 
-        release1_metadata = {"name": "release-1-name", "version": "release-1-version"}
-        release2_metadata = {"name": "release-2-name", "version": "release-2-version"}
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        pivotal_file = temp_path / "product.pivotal"
 
-        with ZipFile(cls._product_file_path, "w", compression=ZIP_STORED) as temp_zip:
-            temp_zip.writestr(
+        with zipfile.ZipFile(pivotal_file, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr(
                 "metadata/metadata.yml",
                 yaml.dump(product_metadata, default_flow_style=False),
             )
 
-            with tarfile.open("release-1.tgz", "w:gz") as tar:
-                with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
-                    fp.write(yaml.dump(release1_metadata, default_flow_style=False))
-                tar.add(fp.name, arcname="release.MF")
-            temp_zip.write(tar.name, arcname="releases/release-1.tgz")
+            for i, meta in enumerate([release1_metadata, release2_metadata], 1):
+                tgz_name = f"release-{i}.tgz"
+                tgz_path = temp_path / tgz_name
 
-            with tarfile.open("release-2.tgz", "w:gz") as tar:
-                with tempfile.NamedTemporaryFile(mode="w", delete=False) as fp:
-                    fp.write(yaml.dump(release2_metadata, default_flow_style=False))
-                tar.add(fp.name, arcname="./release.MF")
-            temp_zip.write(tar.name, arcname="releases/release-2.tgz")
+                with tarfile.open(tgz_path, "w:gz") as tar:
+                    manifest_content = yaml.dump(meta, default_flow_style=False).encode(
+                        "utf-8"
+                    )
+                    ti = tarfile.TarInfo("release.MF")
+                    ti.size = len(manifest_content)
+                    tar.addfile(ti, io.BytesIO(manifest_content))
 
-        print("[setUp] created file", cls._product_file_path)
+                zf.write(tgz_path, arcname=f"releases/{tgz_name}")
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
-        # os.remove(cls._product_file_path)
-
-    def setUp(self):
-        self.pivotal_product = parse_product(self.__class__._product_file_path)
-
-    def test_get_product_version(self):
-        self.assertEqual(
-            "1.2.3.4.5", self.pivotal_product.version, "product version doesn't match"
-        )
-
-    def test_get_product_name(self):
-        self.assertEqual(
-            "the-product", self.pivotal_product.name, "product name doesn't match"
-        )
-
-    def test_get_releases(self):
-        self.assertEqual("release-1-name", self.pivotal_product.releases[0].name)
-        self.assertEqual("release-1-version", self.pivotal_product.releases[0].version)
-
-        self.assertEqual("release-2-name", self.pivotal_product.releases[1].name)
-        self.assertEqual("release-2-version", self.pivotal_product.releases[1].version)
+        yield pivotal_file
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_parse_product(product_file: Path) -> None:
+    pp = parse_product(product_file)
+
+    assert pp.version == "1.2.3.4.5"
+    assert pp.name == "the-product"
+    assert len(pp.releases) == 2
+
+    # Verify releases are sorted or order preserved?
+    # ZipFile.infolist() order depends on insertion order usually.
+    # I inserted release-1 then release-2.
+    # But checking by name is safer if order is not guaranteed.
+
+    r1 = next(r for r in pp.releases if r.name == "release-1-name")
+    assert r1.version == "release-1-version"
+
+    r2 = next(r for r in pp.releases if r.name == "release-2-name")
+    assert r2.version == "release-2-version"

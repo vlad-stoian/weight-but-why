@@ -1,14 +1,23 @@
-Steps to run the project:
-```bash
+# Pivotal Product Tools
 
-brew install python3
-brew install direnv
+Modern Python 3.12 scripts for analyzing Pivotal product files.
 
-pip3 install virtualenv
-virtualenv -p python3 venv
+## Quick Start
 
-direnv allow
+1.  **Install**:
+    ```bash
+    brew install python3
+    python3 -m venv venv && source venv/bin/activate
+    pip install -r requirements.txt
+    ```
 
+2.  **Run**:
+    ```bash
+    python3 weight.py --file-path path/to/product.pivotal
+    ```
 
-python3 weight.py --help
-```
+## Development
+
+*   **Test**: `pytest`
+*   **Lint/Format**: `ruff check --fix .` / `ruff format .`
+*   **Type Check**: `mypy .`
